@@ -1,4 +1,4 @@
-import { defineConfig } from '@playwright/test'
+const { defineConfig } = require('@playwright/test')
 
 export default defineConfig({
   webServer: {
@@ -8,6 +8,6 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
   },
   use: {
-    baseURL: 'http://localhost:8080/',
+    baseURL: 'http://localhost:8080',
   },
 })
