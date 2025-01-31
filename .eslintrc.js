@@ -28,7 +28,7 @@ module.exports = {
     'no-trailing-spaces': 'error',
     'object-curly-spacing': ['error', 'always'],
     'arrow-spacing': ['error', { before: true, after: true }],
-    'no-console': 1,
+    'no-console': ['error', { allow: ['warn', 'error'] }],
     'react/prop-types': 0,
   },
 }
