@@ -6,6 +6,10 @@ const PORT = process.env.PORT || 8080
 
 app.use(express.static('dist'))
 
+app.get('/version', (req, res) => {
+  res.send('1')
+})
+
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`Server started on port ${PORT}`)
