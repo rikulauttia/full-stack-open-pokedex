@@ -41,7 +41,36 @@ jobs:
 
       - name: Bump version and push tag
         if: ${{ github.event_name == 'push' && env.SKIP_DEPLOYMENT != 'true' }}
-        uses: anothrNick/github-tag-action@1.71.0
+        uses: anothrNick/github-tag-action@f278d49d30cdd8775cc3e7dd00b5ee11686ee297
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
+
+  notify_success:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    if: success()
+    steps:
+      - name: Send success notification to Discord
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: info
+          details: "Deployment succeeded!"
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          text: "Deployment has been successfully completed!"
+
+  notify_failure:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    if: failure()
+    steps:
+      - name: Send failure notification to Discord
+        uses: rjstone/discord-webhook-notify@v1
+        with:
+          severity: error
+          details: |
+            **Deployment failed!**
+            **Commit that caused the failure**: ${{ github.event.head_commit.message }}
+            Check the logs for details.
+          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
+          text: "Deployment failed!"
