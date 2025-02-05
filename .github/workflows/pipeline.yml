@@ -7,8 +7,7 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize]
-env:
-  SKIP_DEPLOYMENT: ${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}
+
 jobs:
   simple_deployment_pipeline:
     runs-on: ubuntu-20.04
@@ -29,16 +28,22 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run test:e2e
+
+  deploy:
+    needs: [simple_deployment_pipeline]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check if deployment should be skipped
+        run: echo "SKIP_DEPLOYMENT=${{ contains(join(github.event.commits.*.message, ' '), '#skip') }}" >> $GITHUB_ENV
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && env.SKIP_DEPLOYMENT != 'true' }}
         run: curl https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
 
   tag_release:
-    needs: [simple_deployment_pipeline]
+    needs: [deploy]
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v4
-
       - name: Bump version and push tag
         if: ${{ github.event_name == 'push' && env.SKIP_DEPLOYMENT != 'true' }}
         uses: anothrNick/github-tag-action@1.71.0
@@ -47,7 +52,7 @@ jobs:
           DEFAULT_BUMP: patch
 
   notify_success:
-    needs: [simple_deployment_pipeline]
+    needs: [deploy]
     runs-on: ubuntu-20.04
     if: success()
     steps:
