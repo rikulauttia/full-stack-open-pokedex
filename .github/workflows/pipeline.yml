@@ -28,6 +28,15 @@ jobs:
         run: npx playwright install --with-deps
       - name: Run Playwright tests
         run: npm run test:e2e
+      - name: Failure notification
+        env:
+          COMMITTER: ${{ github.event.commits[0].committer.username }}
+          URL: ${{ github.event.commits[0].url }}
+        if: failure()
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{"content": "❌ Build failed!\nCommit: $COMMITTER\n$URL"}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
 
   deploy:
     needs: [simple_deployment_pipeline]
@@ -38,6 +47,12 @@ jobs:
       - name: Trigger deployment
         if: ${{ github.event_name == 'push' && env.SKIP_DEPLOYMENT != 'true' }}
         run: curl https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_API_KEY }}
+      - name: Send success notification to Discord
+        if: success()
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{"content": "✅ A new version deployed!"}' \
+          ${{ secrets.DISCORD_WEBHOOK }}
 
   tag_release:
     needs: [deploy]
@@ -50,33 +65,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BUMP: patch
-
-  notify_success:
-    needs: [deploy]
-    runs-on: ubuntu-20.04
-    if: success()
-    steps:
-      - name: Send success notification to Discord
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: info
-          details: "Deployment succeeded!"
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-          text: "Deployment has been successfully completed!"
-
-  notify_failure:
-    needs: [simple_deployment_pipeline]
-    runs-on: ubuntu-20.04
-    if: failure()
-    steps:
-      - name: Send failure notification to Discord
-        uses: rjstone/discord-webhook-notify@v1
-        with:
-          severity: error
-          details: |
-            **Deployment failed!**
-            **Commit that caused the failure**: ${{ github.event.head_commit.message }}
-            Check the logs for details.
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK }}
-          text: "Deployment failed!!!"
-
